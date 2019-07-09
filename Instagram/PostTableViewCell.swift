@@ -15,8 +15,10 @@ class PostTableViewCell: UITableViewCell {
     @IBOutlet weak var likeLabel: UILabel!
     @IBOutlet weak var dateLabel: UILabel!
     @IBOutlet weak var captionLabel: UILabel!
+    @IBOutlet weak var comentLabel: UILabel!
+    @IBOutlet weak var comentButton: UIButton!
     
-
+    
     override func awakeFromNib() {
         super.awakeFromNib()
         // Initialization code
@@ -31,6 +33,7 @@ class PostTableViewCell: UITableViewCell {
     func setPostData(_ postData: PostData) {
         self.postImageView.image = postData.image
         
+        //print("\(postData.caption)")
         self.captionLabel.text = "\(postData.name!) : \(postData.caption!)"
         let likeNumber = postData.likes.count
         likeLabel.text = "\(likeNumber)"
@@ -46,6 +49,18 @@ class PostTableViewCell: UITableViewCell {
         } else {
             let buttonImage = UIImage(named: "like_none")
             self.likeButton.setImage(buttonImage, for: .normal)
+        }
+        
+        //課題追加 =============
+        let buttonImage2 = UIImage(named: "coment")
+        self.comentButton.setImage(buttonImage2, for: .normal)
+        
+        if postData.coment != nil {
+            self.comentLabel.isHidden = false
+            self.comentLabel.text = "\(postData.comentName!) : \(postData.coment!)"
+        }
+        else {
+            self.comentLabel.isHidden = true
         }
     }
     

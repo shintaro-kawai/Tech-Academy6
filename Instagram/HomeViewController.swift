@@ -9,11 +9,13 @@
 import UIKit
 import Firebase
 
-class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UITextFieldDelegate {
 
     @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak var comentTextField: UITextField!
     
     var postArray: [PostData] = []
+    var indexPath: IndexPath!
     
     // DatabaseのobserveEventの登録状態を表す
     var observing = false
@@ -37,6 +39,11 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
         // テーブル行の高さの概算値を設定しておく
         // 高さ概算値 = 「縦横比1:1のUIImageViewの高さ(=画面幅)」+「いいねボタン、キャプションラベル、その他余白の高さの合計概算(=100pt)」
         tableView.estimatedRowHeight = UIScreen.main.bounds.width + 100
+        
+        //コメント用TextFieldを隠す  課題追加 =============
+        comentTextField.delegate = self
+        self.comentTextField.borderStyle = UITextField.BorderStyle.line
+        self.comentTextField.isHidden = true
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -48,7 +55,7 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
                 // 要素が追加されたらpostArrayに追加してTableViewを再表示する
                 let postsRef = Database.database().reference().child(Const.PostPath)
                 postsRef.observe(.childAdded, with: { snapshot in
-                    print("DEBUG_PRINT: .childAddedイベントが発生しました。")
+                    print("DEBUG_PRINT: .childAddedイベントが発生しました。_1")
                     
                     // PostDataクラスを生成して受け取ったデータを設定する
                     if let uid = Auth.auth().currentUser?.uid {
@@ -59,9 +66,10 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
                         self.tableView.reloadData()
                     }
                 })
+                
                 // 要素が変更されたら該当のデータをpostArrayから一度削除した後に新しいデータを追加してTableViewを再表示する
                 postsRef.observe(.childChanged, with: { snapshot in
-                    print("DEBUG_PRINT: .childChangedイベントが発生しました。")
+                    print("DEBUG_PRINT: .childChangedイベントが発生しました。_2")
                     
                     if let uid = Auth.auth().currentUser?.uid {
                         // PostDataクラスを生成して受け取ったデータを設定する
@@ -87,6 +95,7 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
                     }
                 })
                 
+                
                 // DatabaseのobserveEventが上記コードにより登録されたため
                 // trueとする
                 observing = true
@@ -106,6 +115,7 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
                 observing = false
             }
         }
+        
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -117,8 +127,11 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! PostTableViewCell
         cell.setPostData(postArray[indexPath.row])
         
-        // セル内のボタンのアクションをソースコードで設定する
+        // セル内のLikeボタンのアクションをソースコードで設定する
         cell.likeButton.addTarget(self, action:#selector(handleButton(_:forEvent:)), for: .touchUpInside)
+        
+        // セル内のComentボタンのアクションをソースコードで設定する
+        cell.comentButton.addTarget(self, action:#selector(handleButton2(_:forEvent:)), for: .touchUpInside)
         
         return cell
     }
@@ -158,6 +171,44 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
             
         }
     }
+    
+    // 課題追加 =============
+    @objc func handleButton2(_ sender: UIButton, forEvent event: UIEvent) {
+        print("DEBUG_PRINT: Comentボタンがタップされました。")
+        
+        //コメント入力欄とキーボードを同時に表示させる
+        self.comentTextField.isHidden = false
+        comentTextField.becomeFirstResponder()
+    
+        // タップされたセルのインデックスを求める
+        let touch = event.allTouches?.first
+        let point = touch!.location(in: self.tableView)
+        //let indexPath = tableView.indexPathForRow(at: point)
+        
+        self.indexPath = tableView.indexPathForRow(at: point)
+        
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.resignFirstResponder()
+        
+        let indexPath = self.indexPath
+        
+        // 配列からタップされたインデックスのデータを取り出す
+        let postData = postArray[indexPath!.row]
+        let name = Auth.auth().currentUser?.displayName
+        
+        // Firebaseに保存するデータの準備
+        let postRef = Database.database().reference().child(Const.PostPath).child(postData.id!)
+        let postDic = ["coment_name": name!, "coment": comentTextField.text!]
+        postRef.updateChildValues(postDic)
+        
+        print("DEBUG_PRINT_**: \(comentTextField.text!)")
+        
+        self.comentTextField.isHidden = true
+        return true
+    }
+
 
     
 
